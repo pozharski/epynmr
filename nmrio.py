@@ -55,6 +55,8 @@ class nvdata(object):
                          ])
     def dim_conv(self, dim, values):
         return self.nv_dimheaders[dim].dim_conv(values)
+    def dim_convinv(self, dim, values):
+        return self.nv_dimheaders[dim].dim_convinv(values)
     def dim_gridvals(self, dim):
         return self.nv_dimheaders[dim].gridvals
 
@@ -80,6 +82,8 @@ class nvdim(object):
             self.gridvals = self.dim_conv(arange(self.nv_size))
     def dim_conv(self, values):
         return (self.nv_refpt-values)*self.convfactor+self.nv_ref
+    def dim_convinv(self, values):
+		return self.nv_refpt-(values-self.nv_ref)/self.convfactor
     def __str__(self):
         return '\n'.join(["Label           : " + self.nv_label,
                           "Size            : " + str(self.nv_size),

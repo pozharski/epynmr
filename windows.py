@@ -150,6 +150,9 @@ class PeakWindow(Figure):
     def limit_pcounter(self):
         self.pcounter = max(0, self.pcounter)
         self.pcounter = min(len(self.peaks)-1, self.pcounter)
+    def limit_auxcounter(self):
+        self.auxcounter = max(0, self.auxcounter)
+        self.auxcounter = min(len(self.ax)-1, self.auxcounter)
     def limit_zoom(self):
         self.xzoom = max(10, self.xzoom)
         self.yzoom = max(10, self.yzoom)
@@ -169,11 +172,17 @@ class PeakWindow(Figure):
             self.onzoom(event)
         if event.key == '+':
             self.pcounter += 1
-            self.limit_pcounter()
-            self.onzoom(event)
         if event.key == '-':
             self.pcounter -= 1
+        if event.key in '+-':
             self.limit_pcounter()
+            self.onzoom(event)
+        if event.key=='n':
+            self.auxcounter += 1
+        if event.key=='p':
+            self.auxcounter -= 1
+        if event.key in 'np':
+            self.limit_auxcounter()
             self.onzoom(event)
         if event.key == 'up':
             self.yzoom += 10
@@ -243,9 +252,13 @@ class PeakWindow(Figure):
             self.alabels = []
             for (i, name) in enumerate(auxpeaks[2]):
                 self.alabels.append(annotate(name, (self.ax[i]-self.dax, self.ay[i]-self.day)))
+            self.auxcounter = 0
             self.onzoom(event)
     def onzoom(self, event):
-        x,y,h = self.npks[self.pcounter]
+        if event.key in 'npA':
+            x,y = self.dataset.dim_convinv(0,self.ax[self.auxcounter]), self.dataset.dim_convinv(1,self.ay[self.auxcounter])
+        else:
+            x,y,h = self.npks[self.pcounter]
         xlims = map(lambda t : self.dataset.dim_conv(0,t), [x-self.xzoom-1,x+self.xzoom])
         ylims = map(lambda t : self.dataset.dim_conv(1,t), [y-self.yzoom-1,y+self.yzoom])
         event.canvas.figure.get_axes()[0].set_xlim(xlims)
