@@ -14,10 +14,12 @@ def viewwindow(data, *args, **kwds):
     fig.canvas.mpl_connect('key_press_event', fig.onkeypress)
     show()
 
-def dualwindow(data1, data2, *args, **kwds):
+def dualwindow(data1, data2, peakfile, *args, **kwds):
     fig = figure(FigureClass=DualWindow)
     fig.set_hsqc(file_or_data(data1), file_or_data(data2))
     fig.plot()
+    if peakfile:
+        fig.loadpeaks(peakfile)
     fig.canvas.mpl_connect('key_press_event', fig.onkeypress)
     show()
 
@@ -94,23 +96,37 @@ class DualWindow(NMRWindow):
         self.add_subplot(111)
         self.axes[0].clear()
         package = zip(*([self.datasets, self.V, ['red', 'blue']]))
-        self.contur = map(lambda x : self.axes[0].contour(x[0].nv_data, x[1], colors=x[2]), package)
+        self.contur = map(lambda x : self.axes[0].contour(x[0].dim_gridvals(0), x[0].dim_gridvals(1), x[0].nv_data, x[1], colors=x[2]), package)
         grid(True)
+        self.axes[0].set_xlim(sorted(self.axes[0].get_xlim(),reverse=True))
+        self.axes[0].set_ylim(sorted(self.axes[0].get_ylim(),reverse=True))
     def recontur(self, event):
         for contur in self.contur:
             for coll in contur.collections:
                 gca().collections.remove(coll)
         package = zip(*([self.datasets, self.V, ['red', 'blue']]))
-        self.contur = map(lambda x : self.axes[0].contour(x[0].nv_data, x[1], colors=x[2]), package)
+        self.contur = map(lambda x : self.axes[0].contour(x[0].dim_gridvals(0), x[0].dim_gridvals(1), x[0].nv_data, x[1], colors=x[2]), package)
         event.canvas.draw()
+    def loadpeaks(self, fname):
+        with open(fname) as fin:
+            auxpeaks = zip(*map(lambda x : x.split(), fin))
+        self.ax = array(auxpeaks[0]).astype(float)
+        self.ay = array(auxpeaks[1]).astype(float)
+        self.astepx = self.ax.ptp()*0.001
+        self.astepy = self.ay.ptp()*0.001
+        self.auxmarks = self.axes[0].plot(self.ax, self.ay, 'go')[0]
+        self.alabels = []
+        for (i, name) in enumerate(auxpeaks[2]):
+            self.alabels.append(annotate(name, (self.ax[i]-3*self.astepx, self.ay[i]-3*self.astepy)))
     def onkeypress(self, event):
         NMRWindow.onkeypress(self, event)
         if event.key == 'pageup':
             self.zfloor += 1
         if event.key == 'pagedown':
             self.zfloor = max(1, self.zfloor-1)
-        self.set_contour_levels()
-        self.recontur(event)
+        if event.key in ['pageup','pagedown']:
+            self.set_contour_levels()
+            self.recontur(event)
 
 class PeakWindow(Figure):
     def __init__(self, *args, **kwds):

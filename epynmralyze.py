@@ -26,6 +26,7 @@ parser.add_argument('-a', '--action', action='append',
                                     'titrhsqc',
                                     'autocros',
                                     'peakcros',
+                                    'peakmatch',
                                 ],
                     default = [],
                     metavar = '', help='Action to perform')

@@ -10,7 +10,7 @@ def viewhsqc(args):
     show()
 
 def dualhsqc(args):
-    dualwindow(args.xargs[0], args.xargs[1])
+    dualwindow(args.xargs[0], args.xargs[1], args.peakfile)
     show()
 
 def peakhsqc(args):
@@ -52,3 +52,16 @@ def peakcros(args):
         holo = hsqc(os.path.join(args.folder,str(sample)+".nv"))
         holopeaks = peakset(holo.xyzconv(holo.peak_search(args.num_peaks, lrbt)))
         print "Sample #" + str(sample).ljust(3) + ": %d peaks matched" % holopeaks.matchcount(peaks, args.dcutoff, args.scutoff)
+
+def peakmatch(args):
+    with open(args.peakfile) as fin:
+        peaks=map(lambda t : t.split(), fin)
+    peaks = peakset(map(lambda t : [float(t[0]), float(t[1]), t[2]], peaks))
+    lrbt = [args.bleft, args.bright, args.bbottom, args.btop]
+    for sample in eval(args.holonums):
+        holo = hsqc(os.path.join(args.folder,str(sample)+".nv"))
+        holopeaks = peakset(holo.xyzconv(holo.peak_search(args.num_peaks, lrbt)))
+        print "Sample #" + str(sample).ljust(3) + ": %d peaks matched" % holopeaks.matchcount(peaks, args.dcutoff, args.scutoff)
+        pms = sorted(zip(*(holopeaks.peakmatch(peaks)+[list(zip(*peaks.peaks)[2])])),key=lambda x : x[1],reverse=True)
+        print '\n'.join(map(lambda x : "%7.3f %6.2f %s" % x[1:], pms))
+        
