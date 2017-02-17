@@ -1,5 +1,5 @@
 import array as binarray
-from scipy import array, concatenate, sqrt
+from scipy import array, concatenate, sqrt, arange
 from scipy.stats import scoreatpercentile
 from scipy.interpolate import RectBivariateSpline
 
@@ -53,6 +53,10 @@ class nvdata(object):
                           "Day               : " + str(self.nv_day),
                           "Year              : " + str(self.nv_year)
                          ])
+    def dim_conv(self, dim, values):
+        return self.nv_dimheaders[dim].dim_conv(values)
+    def dim_gridvals(self, dim):
+        return self.nv_dimheaders[dim].gridvals
 
 class nvdim(object):
     def __init__(self, fin):
@@ -71,6 +75,11 @@ class nvdim(object):
         self.nv_folddown = readarray(fin, 'f', 2).tolist()
         self.nv_label = readarray(fin, 'c', 16).tostring().strip('\x00')
         self.nv_spares = readarray(fin, 'i',15).tolist()
+        if self.nv_size:
+            self.convfactor = self.nv_sw/self.nv_sf/self.nv_size
+            self.gridvals = self.dim_conv(arange(self.nv_size))
+    def dim_conv(self, values):
+        return (self.nv_refpt-values)*self.convfactor+self.nv_ref
     def __str__(self):
         return '\n'.join(["Label           : " + self.nv_label,
                           "Size            : " + str(self.nv_size),
@@ -117,6 +126,11 @@ class hsqc(nvdata):
         ye=Dy/D
         h = (a0 + a1*xe + a2*ye + a11*xe**2 + a22*ye**2 + 2*a12*xe*ye)*((xe**2+ye**2)<1).astype(int)*(D>0).astype(int)*(a11<0).astype(int)/72
         return h, xe, ye
+    def xyzconv(self, xyz):
+        x = self.dim_conv(0, xyz.T[0])
+        y = self.dim_conv(1, xyz.T[1])
+        z = xyz.T[2]
+        return array([x,y,z]).T
     def peak_search(self, num, box=None, verbose=False):
         if verbose:
             sys.stdout.write("Looking for %d peaks\n" % num)
@@ -154,10 +168,10 @@ class hsqc(nvdata):
 
 class peakset(object):
     def __init__(self, peaks, *args, **kwds):
-        self.peaks = peaks
+        self.peaks = array(peaks)
     
     def distance2(self, peak):
-        return ((self.peaks[:,:2]-peak[:2])**2).sum(1)
+        return ((self.peaks[:,:2].astype(float)-peak[:2].astype(float))**2).sum(1)
 
     def singlepeakmatch(self, peak):
         d2 = self.distance2(peak)

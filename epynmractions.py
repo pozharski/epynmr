@@ -42,3 +42,13 @@ def autocros(args):
         holo = hsqc(os.path.join(args.folder,str(sample)+".nv"))
         x = good_peaks.matchsignal(holo,True)
         print "Sample #" + str(sample).ljust(3) + ": " + " ".join(map(lambda x : "%5.2f" % x, map(lambda p : scoreatpercentile(x, p), range(0, 100+10, 10))))
+
+def peakcros(args):
+    with open(args.peakfile) as fin:
+        peaks=map(lambda t : t.split(), fin)
+    peaks = peakset(map(lambda t : [float(t[0]), float(t[1]), t[2]], peaks))
+    lrbt = [args.bleft, args.bright, args.bbottom, args.btop]
+    for sample in eval(args.holonums):
+        holo = hsqc(os.path.join(args.folder,str(sample)+".nv"))
+        holopeaks = peakset(holo.xyzconv(holo.peak_search(args.num_peaks, lrbt)))
+        print "Sample #" + str(sample).ljust(3) + ": %d peaks matched" % holopeaks.matchcount(peaks, args.dcutoff, args.scutoff)

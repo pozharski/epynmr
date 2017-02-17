@@ -11,6 +11,7 @@ dualhsqc    Show overlay of two HSQC spectra
 peakhsqc    Find and edit peaks in HSQC spectrum
 titrhsqc    Manually process set of NMR titrations
 autocros    Auto-process a set of spectra looking for shifts
+peakcros    Match a set of peaks looking for shifts
 
 '''
 
@@ -23,11 +24,13 @@ parser.add_argument('-a', '--action', action='append',
                                     'dualhsqc',
                                     'peakhsqc',
                                     'titrhsqc',
-                                    'autocros'
+                                    'autocros',
+                                    'peakcros',
                                 ],
                     default = [],
                     metavar = '', help='Action to perform')
 parser.add_argument('-i', '--input_file', default="", help='Input data file (HSQC in .nv format)')
+parser.add_argument('--peakfile', default="", help='Peak data file')
 parser.add_argument('-n', '--num-peaks', default=50, type=int, help='Number of peaks to detect')
 parser.add_argument('--bright',  type=int, help='Right edge of the box for peak search')
 parser.add_argument('--bleft',  type=int, help='Left edge of the box for peak search')
@@ -38,6 +41,8 @@ parser.add_argument('--holonums', help='holo-protein spectrum number range, as p
 parser.add_argument('--controls', help='Control spectra number range, as python expression')
 parser.add_argument('--folder', default='', help='FOlder with nv format HSQC numbered spectra files')
 parser.add_argument('--vcutoff', default=0.1, type=float, help="Relative amplitude cutoff in oeak validation over multiple controls")
+parser.add_argument('--dcutoff', default=0.1, type=float, help="Peak matching cutoff, ppm")
+parser.add_argument('--scutoff', default=2, type=float, help="Next peak separation cutoff, relative units")
 
 parser.add_argument('xargs', nargs=REMAINDER)
 

@@ -1,6 +1,6 @@
 from nmrio import hsqc, peakset
 from matplotlib.figure import Figure
-from matplotlib.pyplot import figure, gca, show, grid, close
+from matplotlib.pyplot import figure, gca, show, grid, close, annotate
 from scipy import logspace, log10, delete, array
 import sys
 
@@ -118,6 +118,8 @@ class PeakWindow(Figure):
         self.xzoom = 10
         self.yzoom = 10
         self.zfloor = 1
+        self.ax = []
+        self.ay = []
     def set_max_peaknum(self, peaknum):
         self.peaknum = peaknum
     def set_box(self, box=None):
@@ -127,19 +129,23 @@ class PeakWindow(Figure):
         z = self.dataset.nv_data
         self.V = logspace(log10(z.mean()+self.zfloor*z.std()),log10(z.max()), 10)
     def peak_search(self):
-        self.peaks = self.dataset.peak_search(self.peaknum, self.box)
+        self.npks = self.dataset.peak_search(self.peaknum, self.box)
+        self.peaks = self.dataset.xyzconv(self.npks)
         self.pcounter = 0
     def plot(self):
+        x = self.dataset.dim_gridvals(0)
+        y = self.dataset.dim_gridvals(1)
         z = self.dataset.nv_data
         self.add_subplot(111)
         self.axes[0].clear()
-        self.contur = self.axes[0].contour(z, self.V, colors='blue')
+        self.contur = self.axes[0].contour(x, y, z, self.V, colors='blue')
         self.peakmarks = self.axes[0].plot(self.peaks.T[0],self.peaks.T[1],'r+')[0]
+        self.auxmarks = self.axes[0].plot(self.ax, self.ay, 'go')[0]
         grid(True)
     def recontur(self, event):
         for coll in self.contur.collections:
             gca().collections.remove(coll)
-        self.contur = self.axes[0].contour(self.dataset.nv_data, self.V)
+        self.contur = self.axes[0].contour(self.dataset.dim_gridvals(0), self.dataset.dim_gridvals(1), self.dataset.nv_data, self.V)
         event.canvas.draw()
     def limit_pcounter(self):
         self.pcounter = max(0, self.pcounter)
@@ -192,8 +198,26 @@ class PeakWindow(Figure):
             self.yzoom += 10
             self.xzoom += 10
             self.onzoom(event)
+        if event.key == 'x':
+            delta = array([self.dax,0])
+            self.ax += self.dax
+        if event.key == 'X':
+            delta = array([-self.dax,0])
+            self.ax -= self.dax
+        if event.key == 'y':
+            delta = array([0,self.day])
+            self.ay += self.day
+        if event.key == 'Y':
+            delta = array([0,-self.day])
+            self.ay -= self.day
+        if event.key in 'xXyY':
+            self.auxmarks.set_data((self.ax, self.ay))
+            for alabel in self.alabels:
+                alabel.set_position(delta+array(alabel.get_position()))
+            self.onzoom(event)
         if event.key == 'delete':
             self.peaks = delete(self.peaks, self.pcounter, 0)
+            self.npks = delete(self.npks, self.pcounter, 0)
             self.pcounter = min(len(self.peaks)-1, self.pcounter)
             self.peakmarks.set_data((self.peaks.T[0], self.peaks.T[1]))
             self.onzoom(event)
@@ -208,10 +232,24 @@ class PeakWindow(Figure):
                     peaks.append(map(float, line.split()))
             self.peaks = array(peaks)
             self.plot()
+        if event.key == 'A':
+            with open("shifts.dat") as fin:
+                auxpeaks = zip(*map(lambda x : x.split(), fin))
+            self.ax = array(auxpeaks[0]).astype(float)
+            self.ay = array(auxpeaks[1]).astype(float)
+            self.dax = self.ax.ptp()*0.001
+            self.day = self.ay.ptp()*0.001
+            self.auxmarks.set_data((self.ax, self.ay))
+            self.alabels = []
+            for (i, name) in enumerate(auxpeaks[2]):
+                self.alabels.append(annotate(name, (self.ax[i]-self.dax, self.ay[i]-self.day)))
+            self.onzoom(event)
     def onzoom(self, event):
-        x,y,h = self.peaks[self.pcounter]
-        event.canvas.figure.get_axes()[0].set_xlim((x-self.xzoom-1,x+self.xzoom))
-        event.canvas.figure.get_axes()[0].set_ylim((y-self.yzoom-1,y+self.yzoom))
+        x,y,h = self.npks[self.pcounter]
+        xlims = map(lambda t : self.dataset.dim_conv(0,t), [x-self.xzoom-1,x+self.xzoom])
+        ylims = map(lambda t : self.dataset.dim_conv(1,t), [y-self.yzoom-1,y+self.yzoom])
+        event.canvas.figure.get_axes()[0].set_xlim(xlims)
+        event.canvas.figure.get_axes()[0].set_ylim(ylims)
         event.canvas.draw()
 
 class TitrWindow(PeakWindow):
