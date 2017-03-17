@@ -1,9 +1,9 @@
 from windows import viewwindow, peakwindow, titrwindow, dualwindow
 from matplotlib.pyplot import show
-from scipy import array
+from scipy import array, arange, sqrt, log
 from scipy.stats import scoreatpercentile
-from nmrio import hsqc, peakset
-import os
+from nmrio import hsqc, peakset, bonferroni, iqr_sigma
+import os, sys
 
 def viewhsqc(args):
     viewwindow(args.input_file)
@@ -56,17 +56,65 @@ def peakcros(args):
 def peakmatch(args):
     with open(args.peakfile) as fin:
         peaks=map(lambda t : t.split(), fin)
+    Np = len(peaks)
     peaks = peakset(map(lambda t : [float(t[0]), float(t[1]), t[2]], peaks))
     lrbt = [args.bleft, args.bright, args.bbottom, args.btop]
-    allpms = []
+    allpms, hps = [], []
     for sample in eval(args.holonums):
         holo = hsqc(os.path.join(args.folder,str(sample)+".nv"))
         holopeaks = peakset(holo.xyzconv(holo.peak_search(args.num_peaks, lrbt)))
         samplenum = str(sample).ljust(3)
-        print "Sample #" + samplenum + ": %d peaks matched" % holopeaks.matchcount(peaks, args.dcutoff, args.scutoff)
+        print "Sample #" + samplenum + " processed"
         pms = holopeaks.peakmatch(peaks)
         allpms.append(list(pms[1]))
-        pms = sorted(zip(*(pms+[list(zip(*peaks.peaks)[2])])),key=lambda x : x[1],reverse=True)
-        print '\n'.join(map(lambda x : samplenum+"%7.3f %6.2f %s" % x[1:], pms))
-    print zip(*allpms)
+        hps.append(holopeaks)
+    x = array(allpms).flatten()
+    x.sort()
+    N = len(x)
+    n = arange(1,N).astype(float)
+    sigmaD = sqrt(0.5*x[:N/2]**2/log(N/(N-n[:N/2]))).mean()
+    print "Estimated peak position noise level %.3f" % ( sigmaD )
+    zcut = bonferroni(args.zcutoff, Np)
+    print "Requested Z-score cutoff (%.2f) adjusted to %.2f (Bonferroni correction)" % (args.zcutoff, zcut)
+    dcut = zcut*sigmaD
+    print "Peak mismatch cutoff set to %.3f ppm" % dcut
+    for (i,sample) in enumerate(eval(args.holonums)):
+        holopeaks = hps[i]
+        pms = holopeaks.peakmatch(peaks)
+        samplenum = str(sample).ljust(3)
+        print "Sample #" + samplenum + ": %d peaks shifted" % (Np-holopeaks.matchcount(peaks, dcut, args.scutoff))
+        if args.print_peakmatch:
+            pms = sorted(zip(*(pms+[list(zip(*peaks.peaks)[2])])),key=lambda x : x[1],reverse=True)
+            print '\n'.join(map(lambda x : samplenum+"%7.3f %6.2f %s" % x[1:], filter(lambda xx : xx[1]>=dcut,pms)))
         
+def peakmxy(args):
+    with open(args.peakfile) as fin:
+        peaks=map(lambda t : t.split(), fin)
+    Np = len(peaks)
+    peaks = peakset(map(lambda t : [float(t[0]), float(t[1]), t[2]], peaks))
+    lrbt = [args.bleft, args.bright, args.bbottom, args.btop]
+    allxy, hps = [], []
+    for sample in eval(args.holonums):
+        holo = hsqc(os.path.join(args.folder,str(sample)+".nv"))
+        holopeaks = peakset(holo.xyzconv(holo.peak_search(args.num_peaks, lrbt)))
+        hps.append(holopeaks)
+        allxy.append(holopeaks.peakmxy(peaks))
+        samplenum = str(sample).ljust(3)
+        sys.stderr.write("Sample #" + samplenum + " processed\n")
+    xx, yy = array(allxy).T
+    sx, sy = iqr_sigma(xx), iqr_sigma(yy)
+    sys.stderr.write("Estimated peak position variations %.3f %.3f\n" % ( sx, sy ))
+    zcut = bonferroni(args.zcutoff, Np)
+    sys.stderr.write("Requested Z-score cutoff (%.2f) adjusted to %.2f (Bonferroni correction)\n" % (args.zcutoff, zcut))
+    xcut, ycut = zcut*sx, zcut*sy
+    sys.stderr.write("Peak mismatch cutoffs set to %.3f / %.3f ppm\n" % (xcut, ycut))
+    for (i,sample) in enumerate(eval(args.holonums)):
+        holopeaks = hps[i]
+        pms = holopeaks.peakmatch(peaks)
+        Nm, indm, xm, ym = holopeaks.matchcut_xy(peaks, xcut, ycut)
+        samplenum = str(sample).ljust(3)
+        print "Sample #" + samplenum + ": %d peaks shifted" % Nm
+        if args.print_peakmatch:
+            for (j, flag) in enumerate(indm):
+                if flag or args.print_full:
+                    print samplenum + " %7.3f %7.3f %s %7.3f %7.3f" % (holopeaks.peaks[pms[0][j]][0], holopeaks.peaks[pms[0][j]][1], peaks.peaks[j][2], xm[j], ym[j])

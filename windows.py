@@ -87,6 +87,7 @@ class DualWindow(NMRWindow):
         Figure.__init__(self, *args, **kwds)
         self.zfloor = 1
         self.contur = []
+        self.auxpeaks_loaded = False
     def set_hsqc(self, data1, data2):
         self.datasets = [ data1, data2 ]
         self.set_contour_levels()
@@ -100,6 +101,7 @@ class DualWindow(NMRWindow):
         grid(True)
         self.axes[0].set_xlim(sorted(self.axes[0].get_xlim(),reverse=True))
         self.axes[0].set_ylim(sorted(self.axes[0].get_ylim(),reverse=True))
+        self.axlim = ['data', self.axes[0].get_xlim(), self.axes[0].get_ylim()]
     def recontur(self, event):
         for contur in self.contur:
             for coll in contur.collections:
@@ -118,6 +120,12 @@ class DualWindow(NMRWindow):
         self.alabels = []
         for (i, name) in enumerate(auxpeaks[2]):
             self.alabels.append(annotate(name, (self.ax[i]-3*self.astepx, self.ay[i]-3*self.astepy)))
+        self.marcounter=0
+        self.labmark = None
+        self.auxpeaks_loaded = True
+    def limit_marcounter(self):
+        self.marcounter = max(0, self.marcounter)
+        self.marcounter = min(len(self.alabels)-1, self.marcounter)
     def onkeypress(self, event):
         NMRWindow.onkeypress(self, event)
         if event.key == 'pageup':
@@ -127,6 +135,39 @@ class DualWindow(NMRWindow):
         if event.key in ['pageup','pagedown']:
             self.set_contour_levels()
             self.recontur(event)
+        if event.key == '+':
+            self.marcounter += 1
+        if event.key == '-':
+            self.marcounter -= 1
+        if event.key in '+-':
+            self.limit_marcounter()
+            if self.labmark:
+                self.labmark.remove()
+            self.labmark = annotate(self.alabels[self.marcounter].get_text(), self.alabels[self.marcounter].xy)
+            self.labmark.set_backgroundcolor('yellow')
+            self.labmark.set_zorder(100)
+            event.canvas.draw()
+        if event.key == 'super':
+            if self.labmark:
+                self.labmark.remove()
+                self.labmark = None
+            else:
+                self.labmark = annotate(self.alabels[self.marcounter].get_text(), self.alabels[self.marcounter].xy)
+                self.labmark.set_backgroundcolor('yellow')
+                self.labmark.set_zorder(100)
+            event.canvas.draw()
+        if event.key == 'home':
+            if self.axlim[0] == 'data':
+                if self.auxpeaks_loaded:
+                    self.axlim[0] = 'peak'
+                    xpad, ypad = 0.05*self.ax.ptp(), 0.05*self.ay.ptp()
+                    self.axes[0].set_xlim((max(self.ax)+xpad, min(self.ax)-xpad))
+                    self.axes[0].set_ylim(max(self.ay)+ypad, min(self.ay)-ypad)
+            elif self.axlim[0] == 'peak':
+                self.axlim[0] = 'data'
+                self.axes[0].set_xlim(self.axlim[1])
+                self.axes[0].set_ylim(self.axlim[2])
+            event.canvas.draw()
 
 class PeakWindow(Figure):
     def __init__(self, *args, **kwds):

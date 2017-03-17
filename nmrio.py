@@ -2,6 +2,7 @@ import array as binarray
 from scipy import array, concatenate, sqrt, arange
 from scipy.stats import scoreatpercentile
 from scipy.interpolate import RectBivariateSpline
+from scipy.special import erfcinv, erfc, erfinv
 
 def readarray(fin, astype='I', num=1):
     '''
@@ -10,6 +11,17 @@ def readarray(fin, astype='I', num=1):
     var = binarray.array(astype)
     var.fromfile(fin, num)
     return var
+
+def bonferroni(z, N):
+    ''' Applies Bonferroni correction to a Z-score target given N measurements. '''
+    return erfcinv(erfc(z/sqrt(2))/N)*sqrt(2)
+
+def probit(p):
+    return sqrt(2)*erfinv(2*p-1)
+
+def iqr_sigma(x, p=0.5):
+    a, b = 0.5*(1-p), 0.5*(1+p)
+    return (scoreatpercentile(x,100*b)-scoreatpercentile(x,100*a))/(probit(b)-probit(a))
 
 class nvdata(object):
     def __init__(self, fname):
@@ -185,9 +197,20 @@ class peakset(object):
     def peakmatch(self, other):
         return zip(*map(self.singlepeakmatch, other.peaks))
 
+    def peakmatch_index(self, other):
+        return array(map(lambda t : self.distance2(t).argsort()[0], other.peaks))
+
+    def peakmxy(self, other):
+        return self.peaks[self.peakmatch_index(other)][:,:2]-other.peaks[:,:2].astype(float)
+
     def matchcount(self, other, d_cutoff=1.0, s_cutoff=2.0):
         pms = self.peakmatch(other)
         return sum((array(pms[2])>s_cutoff)*(array(pms[1])<d_cutoff))
+
+    def matchcut_xy(self, other, xcut, ycut):
+        xx, yy = self.peakmxy(other).T
+        ind = (abs(xx)>xcut)+(abs(yy)>ycut)
+        return sum(ind), ind, xx, yy
 
     def matchperc(self, other, step=10):
         x = self.peakmatch(other)[1]

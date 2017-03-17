@@ -27,6 +27,7 @@ parser.add_argument('-a', '--action', action='append',
                                     'autocros',
                                     'peakcros',
                                     'peakmatch',
+                                    'peakmxy',
                                 ],
                     default = [],
                     metavar = '', help='Action to perform')
@@ -44,6 +45,9 @@ parser.add_argument('--folder', default='', help='FOlder with nv format HSQC num
 parser.add_argument('--vcutoff', default=0.1, type=float, help="Relative amplitude cutoff in oeak validation over multiple controls")
 parser.add_argument('--dcutoff', default=0.1, type=float, help="Peak matching cutoff, ppm")
 parser.add_argument('--scutoff', default=2, type=float, help="Next peak separation cutoff, relative units")
+parser.add_argument('--zcutoff', default=2.0, type=float, help="Peak matching cutoff, Z-score")
+parser.add_argument('--print-peakmatch', action='store_true')
+parser.add_argument('--print-full', action='store_true')
 
 parser.add_argument('xargs', nargs=REMAINDER)
 
