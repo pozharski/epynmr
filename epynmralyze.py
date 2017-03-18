@@ -28,6 +28,7 @@ parser.add_argument('-a', '--action', action='append',
                                     'peakcros',
                                     'peakmatch',
                                     'peakmxy',
+                                    'dualpdfs',
                                 ],
                     default = [],
                     metavar = '', help='Action to perform')
@@ -48,6 +49,7 @@ parser.add_argument('--scutoff', default=2, type=float, help="Next peak separati
 parser.add_argument('--zcutoff', default=2.0, type=float, help="Peak matching cutoff, Z-score")
 parser.add_argument('--print-peakmatch', action='store_true')
 parser.add_argument('--print-full', action='store_true')
+parser.add_argument('--pdfile', default="epynmr.pdf", help='Output PDF file name')
 
 parser.add_argument('xargs', nargs=REMAINDER)
 
