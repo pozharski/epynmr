@@ -1,9 +1,10 @@
 from windows import viewwindow, peakwindow, titrwindow, dualwindow
-from matplotlib.pyplot import show
+from matplotlib.pyplot import show, draw, close
 from scipy import array, arange, sqrt, log
 from scipy.stats import scoreatpercentile
 from nmrio import hsqc, peakset, bonferroni, iqr_sigma
 import os, sys
+from matplotlib.backends.backend_pdf import PdfPages
 
 def viewhsqc(args):
     viewwindow(args.input_file, [args.bleft, args.bright, args.bbottom, args.btop])
@@ -12,6 +13,25 @@ def viewhsqc(args):
 def dualhsqc(args):
     dualwindow(args.xargs[0], args.xargs[1], args.peakfile, [args.bleft, args.bright, args.bbottom, args.btop])
     show()
+
+def dualpdfs(args):
+    apopath = os.path.join(args.folder,str(args.aponum)+".nv")
+    pdfout = PdfPages(args.pdfile)
+    holos = eval(args.holonums)
+    for (i,sample) in enumerate(holos):
+        sys.stdout.write("Page %d of %d: Sample %d... " % (i, len(holos), sample))
+        holopath = os.path.join(args.folder,str(sample)+".nv")
+        fig = dualwindow(apopath, holopath, args.peakfile)
+        fig.zfloor_up()
+        fig.zoom_peaks()
+        fig.aux_font_size(6)
+        fig.set_size_inches(10, 6)
+        fig.suptitle('Sample #'+str(sample))
+        draw()
+        pdfout.savefig(fig)
+        sys.stdout.write(" added.\n")
+        close(fig)
+    pdfout.close()
 
 def peakhsqc(args):
     peakwindow(args.input_file, args.num_peaks, [args.bleft, args.bright, args.bbottom, args.btop])
