@@ -7,15 +7,17 @@ import sys
 def file_or_data(data):
     return data if data.__class__ is hsqc else hsqc(data)
     
-def viewwindow(data, *args, **kwds):
+def viewwindow(data, box=None, *args, **kwds):
     fig = figure(FigureClass=ViewWindow)
+    fig.set_box(box)
     fig.set_hsqc(file_or_data(data))
     fig.plot()
     fig.canvas.mpl_connect('key_press_event', fig.onkeypress)
     show()
 
-def dualwindow(data1, data2, peakfile, *args, **kwds):
+def dualwindow(data1, data2, peakfile, box=None, *args, **kwds):
     fig = figure(FigureClass=DualWindow)
+    fig.set_box(box)
     fig.set_hsqc(file_or_data(data1), file_or_data(data2))
     fig.plot()
     if peakfile:
@@ -25,9 +27,9 @@ def dualwindow(data1, data2, peakfile, *args, **kwds):
 
 def peakwindow(data, num=50, box=None, *args, **kwds):
     fig = figure(FigureClass=PeakWindow)
+    fig.set_box(box)
     fig.set_hsqc(data if data.__class__ is hsqc else hsqc(data))
     fig.set_max_peaknum(num)
-    fig.set_box(box)
     fig.peak_search()
     fig.plot()
     fig.canvas.mpl_connect('key_press_event', fig.onkeypress)
@@ -50,18 +52,20 @@ class NMRWindow(Figure):
         Figure.__init__(self, *args, **kwds)
         self.zfloor = 1
     def log_contour_levels(self, z):
-        return logspace(log10(z.mean()+self.zfloor*z.std()),log10(z.max()), 10)
+        return logspace(log10(z.mean()+self.zfloor*z.std()),log10(z.max()), 20)
     def onkeypress(self, event):
         if event.key == 'q':
             close(self)
             sys.exit()
+    def set_box(self, box=None):
+        self.box = box
 
 class ViewWindow(NMRWindow):
     def set_hsqc(self, data):
         self.dataset = data
         self.set_contour_levels()
     def set_contour_levels(self):
-        self.V = self.log_contour_levels(self.dataset.nv_data)
+        self.V = self.log_contour_levels(self.dataset.nv_data[self.box[3]:self.box[2],self.box[0]:self.box[1]])
     def plot(self):
         z = self.dataset.nv_data
         self.add_subplot(111)
@@ -92,7 +96,7 @@ class DualWindow(NMRWindow):
         self.datasets = [ data1, data2 ]
         self.set_contour_levels()
     def set_contour_levels(self):
-        self.V = map(lambda x : self.log_contour_levels(x.nv_data),  self.datasets)
+        self.V = map(lambda x : self.log_contour_levels(x.nv_data[self.box[3]:self.box[2],self.box[0]:self.box[1]]),  self.datasets)
     def plot(self):
         self.add_subplot(111)
         self.axes[0].clear()
@@ -183,7 +187,9 @@ class PeakWindow(Figure):
         self.box = box
     def set_hsqc(self, data):
         self.dataset = data
-        z = self.dataset.nv_data
+        self.set_vmatrix()
+    def set_vmatrix(self):
+        z = self.dataset.nv_data[self.box[3]:self.box[2],self.box[0]:self.box[1]]
         self.V = logspace(log10(z.mean()+self.zfloor*z.std()),log10(z.max()), 10)
     def peak_search(self):
         self.npks = self.dataset.peak_search(self.peaknum, self.box)
@@ -216,13 +222,11 @@ class PeakWindow(Figure):
     def onkeypress(self, event):
         if event.key == 'pageup':
             self.zfloor += 1
-            z = self.dataset.nv_data
-            self.V = logspace(log10(z.mean()+self.zfloor*z.std()),log10(z.max()), 10)
+            self.set_vmatrix()
             self.recontur(event)
         if event.key == 'pagedown':
             self.zfloor = max(1, self.zfloor-1)
-            z = self.dataset.nv_data
-            self.V = logspace(log10(z.mean()+self.zfloor*z.std()),log10(z.max()), 10)
+            self.set_vmatrix()
             self.recontur(event)
         if event.key == 'home':
             self.pcounter = 0

@@ -6,11 +6,11 @@ from nmrio import hsqc, peakset, bonferroni, iqr_sigma
 import os, sys
 
 def viewhsqc(args):
-    viewwindow(args.input_file)
+    viewwindow(args.input_file, [args.bleft, args.bright, args.bbottom, args.btop])
     show()
 
 def dualhsqc(args):
-    dualwindow(args.xargs[0], args.xargs[1], args.peakfile)
+    dualwindow(args.xargs[0], args.xargs[1], args.peakfile, [args.bleft, args.bright, args.bbottom, args.btop])
     show()
 
 def peakhsqc(args):
