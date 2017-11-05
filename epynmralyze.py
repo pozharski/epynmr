@@ -32,7 +32,7 @@ parser.add_argument('-a', '--action', action='append',
                                 ],
                     default = [],
                     metavar = '', help='Action to perform')
-parser.add_argument('-i', '--input_file', default="", help='Input data file (HSQC in .nv format)')
+parser.add_argument('-i', '--input_file', help='Input data file (HSQC in .nv format)')
 parser.add_argument('--peakfile', default="", help='Peak data file')
 parser.add_argument('-n', '--num-peaks', default=50, type=int, help='Number of peaks to detect')
 parser.add_argument('--bright',  type=int, help='Right edge of the box for peak search')

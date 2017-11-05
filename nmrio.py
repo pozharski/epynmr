@@ -147,6 +147,11 @@ class hsqc(nvdata):
         y = self.dim_conv(1, xyz.T[1])
         z = xyz.T[2]
         return array([x,y,z]).T
+    def invconv(self, xyz):
+        x = self.dim_convinv(0, xyz.T[0])
+        y = self.dim_convinv(1, xyz.T[1])
+        z = xyz.T[2]
+        return array([x,y,z]).T
     def peak_search(self, num, box=None, verbose=False):
         if verbose:
             sys.stdout.write("Looking for %d peaks\n" % num)

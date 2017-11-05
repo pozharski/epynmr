@@ -5,6 +5,7 @@ from scipy.stats import scoreatpercentile
 from nmrio import hsqc, peakset, bonferroni, iqr_sigma
 import os, sys
 from matplotlib.backends.backend_pdf import PdfPages
+from windows import TKPeaks
 
 def viewhsqc(args):
     viewwindow(args.input_file, [args.bleft, args.bright, args.bbottom, args.btop])
@@ -34,8 +35,7 @@ def dualpdfs(args):
     pdfout.close()
 
 def peakhsqc(args):
-    peakwindow(args.input_file, args.num_peaks, [args.bleft, args.bright, args.bbottom, args.btop])
-    show()
+    TKPeaks(args).mainloop()
 
 def titrhsqc(args):
     titrwindow(args.aponum, eval(args.holonums), args.num_peaks, [args.bleft, args.bright, args.bbottom, args.btop])

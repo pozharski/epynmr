@@ -4,6 +4,8 @@ from matplotlib.pyplot import figure, gca, show, grid, close, annotate
 from scipy import logspace, log10, delete, array
 import sys
 
+import Tkinter, tkFileDialog
+
 def file_or_data(data):
     return data if data.__class__ is hsqc else hsqc(data)
     
@@ -33,7 +35,7 @@ def peakwindow(data, num=50, box=None, *args, **kwds):
     fig.peak_search()
     fig.plot()
     fig.canvas.mpl_connect('key_press_event', fig.onkeypress)
-    show()
+    return fig
 
 def titrwindow(aponum, holonums, peaknum, box=None, *args, **kwds):
     fig = figure(FigureClass=TitrWindow)
@@ -46,6 +48,61 @@ def titrwindow(aponum, holonums, peaknum, box=None, *args, **kwds):
     fig.plot()
     fig.canvas.mpl_connect('key_press_event', fig.onkeypress)
     show()
+
+class TKWindow(object):
+    def __init__(self, margs, *args, **kwds):
+        self.tkroot = Tkinter.Tk()
+        self.build(margs)
+    def build(self, margs):
+        pass
+    def mainloop(self):
+        show()
+        self.tkroot.mainloop()
+        close()
+
+class TKPeaks(TKWindow):
+    def build(self, margs):
+        if margs.input_file is None:
+            margs.input_file = tkFileDialog.askopenfilename(title = "Select NV file",filetypes = (("NMRview files","*.nv"),("all files","*.*")))
+        self.gwindow = peakwindow(margs.input_file, margs.num_peaks, [margs.bleft, margs.bright, margs.bbottom, margs.btop])
+        self.label = Tkinter.Label(self.tkroot, text="HSQC peaks tool")
+        self.label.grid()
+        buttons =   [   ('pageup',    'Contour up', 1, 0),
+                        ('pagedown',  'Contour down', 1, 1),
+                        ('home','First peak', 2, 0),
+                        ('+','Next peak', 2, 1),
+                        ('-','Previous peak', 2, 2),
+                        ('z','Zoom in', 3, 0),
+                        ('Z','Zoom out', 3, 1),
+                        ('delete','Delete current peak', 4, 0),
+                    ]
+        self.buttons = {}
+        for key, label, row, column in buttons:
+            self.add_button(key, label, row, column)
+        Tkinter.Button(self.tkroot, text='Save peaks', command=self.savepeaks).grid(row=5, column=0)
+        Tkinter.Button(self.tkroot, text='Load peaks', command=self.loadpeaks).grid(row=5, column=1)
+        Tkinter.Button(self.tkroot, text='Load auxillary peaks', command=self.auxpeaks).grid(row=5, column=2)
+        Tkinter.Button(self.tkroot, text='Quit', command=self.tkroot.quit).grid()
+    def add_button(self, key, label, row, column):
+        self.buttons[key] = Tkinter.Button(self.tkroot, text=label, command=lambda : self.gwindow.canvas.key_press_event(key))
+        self.buttons[key].grid(row=row, column=column)
+    def savepeaks(self):
+        peakfile = tkFileDialog.asksaveasfilename(title = "Save as...",filetypes = (("Peak files","*.peaks"),("all files","*.*")))
+        with open(peakfile, "w") as fout:
+            for peak in self.gwindow.peaks:
+                fout.write("%10f %10f %20f\n" % tuple(peak))
+    def loadpeaks(self):
+        peakfile = tkFileDialog.askopenfilename(title = "Load peaks",filetypes = (("Peak files","*.peaks"),("all files","*.*")))
+        peaks = []
+        with open(peakfile) as fin:
+            for line in fin:
+                peaks.append(map(float, line.split()))
+        self.gwindow.peaks = array(peaks)
+        self.gwindow.npks = self.gwindow.dataset.invconv(self.gwindow.peaks)
+        self.gwindow.plot()
+    def auxpeaks(self):
+        self.gwindow.shiftsdat = tkFileDialog.askopenfilename(title = "Load auxillary peaks",filetypes = (("Peak files","*.dat"),("all files","*.*")))
+        self.gwindow.canvas.key_press_event('A')
 
 class NMRWindow(Figure):
     def __init__(self, *args, **kwds):
@@ -201,6 +258,7 @@ class PeakWindow(Figure):
         self.zfloor = 1
         self.ax = []
         self.ay = []
+        self.shiftsdat = 'shifts.dat'
     def set_max_peaknum(self, peaknum):
         self.peaknum = peaknum
     def set_box(self, box=None):
@@ -323,7 +381,7 @@ class PeakWindow(Figure):
             self.peaks = array(peaks)
             self.plot()
         if event.key == 'A':
-            with open("shifts.dat") as fin:
+            with open(self.shiftsdat) as fin:
                 auxpeaks = zip(*map(lambda x : x.split(), fin))
             self.ax = array(auxpeaks[0]).astype(float)
             self.ay = array(auxpeaks[1]).astype(float)
