@@ -27,13 +27,15 @@ def dualwindow(data1, data2, peakfile, box=None, *args, **kwds):
     fig.canvas.mpl_connect('key_press_event', fig.onkeypress)
     return fig
 
-def peakwindow(data, num=50, box=None, *args, **kwds):
+def peakwindow(data, num=50, box=None, apfname=None, *args, **kwds):
     fig = figure(FigureClass=PeakWindow)
     fig.set_box(box)
     fig.set_hsqc(data if data.__class__ is hsqc else hsqc(data))
     fig.set_max_peaknum(num)
     fig.peak_search()
     fig.plot()
+    if apfname is not None:
+        fig.loadapeaks(apfname)
     fig.canvas.mpl_connect('key_press_event', fig.onkeypress)
     return fig
 
@@ -64,7 +66,7 @@ class TKPeaks(TKWindow):
     def build(self, margs):
         if margs.input_file is None:
             margs.input_file = tkFileDialog.askopenfilename(title = "Select NV file",filetypes = (("NMRview files","*.nv"),("all files","*.*")))
-        self.gwindow = peakwindow(margs.input_file, margs.num_peaks, [margs.bleft, margs.bright, margs.bbottom, margs.btop])
+        self.gwindow = peakwindow(margs.input_file, margs.num_peaks, [margs.bleft, margs.bright, margs.bbottom, margs.btop], margs.auxpeakfile)
         self.label = Tkinter.Label(self.tkroot, text="HSQC peaks tool")
         self.label.grid()
         buttons =   [   ('pageup',    'Contour up', 1, 0),
@@ -381,18 +383,21 @@ class PeakWindow(Figure):
             self.peaks = array(peaks)
             self.plot()
         if event.key == 'A':
-            with open(self.shiftsdat) as fin:
-                auxpeaks = zip(*map(lambda x : x.split(), fin))
-            self.ax = array(auxpeaks[0]).astype(float)
-            self.ay = array(auxpeaks[1]).astype(float)
-            self.dax = self.ax.ptp()*0.001
-            self.day = self.ay.ptp()*0.001
-            self.auxmarks.set_data((self.ax, self.ay))
-            self.alabels = []
-            for (i, name) in enumerate(auxpeaks[2]):
-                self.alabels.append(annotate(name, (self.ax[i]-self.dax, self.ay[i]-self.day)))
-            self.auxcounter = 0
+            self.loadapeaks(self.shiftsdat)
             self.onzoom(event)
+    def loadapeaks(self, fname):
+        with open(fname) as fin:
+            auxpeaks = zip(*map(lambda x : x.split()[:3], fin))
+        self.ax = array(auxpeaks[0]).astype(float)
+        self.ay = array(auxpeaks[1]).astype(float)
+        self.dax = self.ax.ptp()*0.001
+        self.day = self.ay.ptp()*0.001
+        self.auxmarks.set_data((self.ax, self.ay))
+        self.alabels = []
+        for (i, name) in enumerate(auxpeaks[2]):
+            self.alabels.append(annotate(name, (self.ax[i]-self.dax, self.ay[i]-self.day)))
+        self.auxcounter = 0
+        
     def onzoom(self, event):
         if event.key in 'npA':
             x,y = self.dataset.dim_convinv(0,self.ax[self.auxcounter]), self.dataset.dim_convinv(1,self.ay[self.auxcounter])

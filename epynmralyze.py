@@ -19,7 +19,7 @@ from argparse import ArgumentParser, RawDescriptionHelpFormatter, REMAINDER
 parser = ArgumentParser(formatter_class=RawDescriptionHelpFormatter,
                         description=headerhelp)
 parser.add_argument('-a', '--action', action='append',
-                    choices =   [	
+                    choices =   [   
                                     'viewhsqc',
                                     'dualhsqc',
                                     'peakhsqc',
@@ -34,6 +34,7 @@ parser.add_argument('-a', '--action', action='append',
                     metavar = '', help='Action to perform')
 parser.add_argument('-i', '--input_file', help='Input data file (HSQC in .nv format)')
 parser.add_argument('--peakfile', default="", help='Peak data file')
+parser.add_argument('--auxpeakfile', help='Auxillary peak data file')
 parser.add_argument('-n', '--num-peaks', default=50, type=int, help='Number of peaks to detect')
 parser.add_argument('--bright',  type=int, help='Right edge of the box for peak search')
 parser.add_argument('--bleft',  type=int, help='Left edge of the box for peak search')
