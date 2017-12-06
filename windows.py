@@ -52,7 +52,7 @@ def titrwindow(aponum, holonums, peaknum, box=None, *args, **kwds):
     show()
 
 class TKWindow(object):
-    def __init__(self, margs, *args, **kwds):
+    def __init__(self, margs, xargs, *args, **kwds):
         self.tkroot = Tkinter.Tk()
         self.build(margs)
     def build(self, margs):
@@ -199,27 +199,28 @@ class DualWindow(NMRWindow):
         if event.key in ['pageup','pagedown']:
             self.set_contour_levels()
             self.recontur(event)
-        if event.key == '+':
-            self.marcounter += 1
-        if event.key == '-':
-            self.marcounter -= 1
-        if event.key in '+-':
-            self.limit_marcounter()
-            if self.labmark:
-                self.labmark.remove()
-            self.labmark = annotate(self.alabels[self.marcounter].get_text(), self.alabels[self.marcounter].xy)
-            self.labmark.set_backgroundcolor('yellow')
-            self.labmark.set_zorder(100)
-            event.canvas.draw()
-        if event.key == 'super':
-            if self.labmark:
-                self.labmark.remove()
-                self.labmark = None
-            else:
+        if self.auxpeaks_loaded:
+            if event.key == '+':
+                self.marcounter += 1
+            if event.key == '-':
+                self.marcounter -= 1
+            if event.key in '+-':
+                self.limit_marcounter()
+                if self.labmark:
+                    self.labmark.remove()
                 self.labmark = annotate(self.alabels[self.marcounter].get_text(), self.alabels[self.marcounter].xy)
                 self.labmark.set_backgroundcolor('yellow')
                 self.labmark.set_zorder(100)
-            event.canvas.draw()
+                event.canvas.draw()
+            if event.key == 'super':
+                if self.labmark:
+                    self.labmark.remove()
+                    self.labmark = None
+                else:
+                    self.labmark = annotate(self.alabels[self.marcounter].get_text(), self.alabels[self.marcounter].xy)
+                    self.labmark.set_backgroundcolor('yellow')
+                    self.labmark.set_zorder(100)
+                event.canvas.draw()
         if event.key == 'home':
             if self.axlim[0] == 'data':
                 if self.auxpeaks_loaded:
@@ -261,6 +262,7 @@ class PeakWindow(Figure):
         self.ax = []
         self.ay = []
         self.shiftsdat = 'shifts.dat'
+        self.auxpeaks_loaded = False
     def set_max_peaknum(self, peaknum):
         self.peaknum = peaknum
     def set_box(self, box=None):
@@ -385,6 +387,13 @@ class PeakWindow(Figure):
         if event.key == 'A':
             self.loadapeaks(self.shiftsdat)
             self.onzoom(event)
+        if event.key == 'M':
+            if self.auxpeaks_loaded:
+                self.automatch()
+                self.onzoom(event)
+        if event.key == 'q':
+            close(self)
+            sys.exit()
     def loadapeaks(self, fname):
         with open(fname) as fin:
             auxpeaks = zip(*map(lambda x : x.split()[:3], fin))
@@ -397,9 +406,15 @@ class PeakWindow(Figure):
         for (i, name) in enumerate(auxpeaks[2]):
             self.alabels.append(annotate(name, (self.ax[i]-self.dax, self.ay[i]-self.day)))
         self.auxcounter = 0
-        
+        self.auxpeaks_loaded = True
+    def automatch(self):
+        axy = array([self.ax,self.ay]).T
+        pxy = self.peaks[:,:2]
+        sf=sqrt(axy.var(0)+pxy.var(0))
+        nindex = [nonzero((abs((pxy-axy[i,:]))/sf<0.1).all(1))[0] for i in range(axy.shape[0])]
+        # Continue here!!!
     def onzoom(self, event):
-        if event.key in 'npA':
+        if event.key in 'npAM':
             x,y = self.dataset.dim_convinv(0,self.ax[self.auxcounter]), self.dataset.dim_convinv(1,self.ay[self.auxcounter])
         else:
             x,y,h = self.npks[self.pcounter]

@@ -7,15 +7,15 @@ import os, sys
 from matplotlib.backends.backend_pdf import PdfPages
 from windows import TKPeaks
 
-def viewhsqc(args):
+def viewhsqc(args, xargs):
     viewwindow(args.input_file, [args.bleft, args.bright, args.bbottom, args.btop])
     show()
 
-def dualhsqc(args):
-    dualwindow(args.xargs[0], args.xargs[1], args.peakfile, [args.bleft, args.bright, args.bbottom, args.btop])
+def dualhsqc(args, xargs):
+    dualwindow(xargs[0], xargs[1], args.peakfile, [args.bleft, args.bright, args.bbottom, args.btop])
     show()
 
-def dualpdfs(args):
+def dualpdfs(args, xargs):
     apopath = os.path.join(args.folder,str(args.aponum)+".nv")
     pdfout = PdfPages(args.pdfile)
     holos = eval(args.holonums)
@@ -34,14 +34,14 @@ def dualpdfs(args):
         close(fig)
     pdfout.close()
 
-def peakhsqc(args):
-    TKPeaks(args).mainloop()
+def peakhsqc(args, xargs):
+    TKPeaks(args, xargs).mainloop()
 
-def titrhsqc(args):
+def titrhsqc(args, xargs):
     titrwindow(args.aponum, eval(args.holonums), args.num_peaks, [args.bleft, args.bright, args.bbottom, args.btop])
     show()
 
-def autocros(args):
+def autocros(args, xargs):
     apo = hsqc(os.path.join(args.folder,str(args.aponum)+".nv"))
     lrbt = [args.bleft, args.bright, args.bbottom, args.btop]
     apo_peakdata = apo.peak_search(args.num_peaks, lrbt)
@@ -63,7 +63,7 @@ def autocros(args):
         x = good_peaks.matchsignal(holo,True)
         print "Sample #" + str(sample).ljust(3) + ": " + " ".join(map(lambda x : "%5.2f" % x, map(lambda p : scoreatpercentile(x, p), range(0, 100+10, 10))))
 
-def peakcros(args):
+def peakcros(args, xargs):
     with open(args.peakfile) as fin:
         peaks=map(lambda t : t.split(), fin)
     peaks = peakset(map(lambda t : [float(t[0]), float(t[1]), t[2]], peaks))
@@ -73,7 +73,7 @@ def peakcros(args):
         holopeaks = peakset(holo.xyzconv(holo.peak_search(args.num_peaks, lrbt)))
         print "Sample #" + str(sample).ljust(3) + ": %d peaks matched" % holopeaks.matchcount(peaks, args.dcutoff, args.scutoff)
 
-def peakmatch(args):
+def peakmatch(args, xargs):
     with open(args.peakfile) as fin:
         peaks=map(lambda t : t.split(), fin)
     Np = len(peaks)
@@ -107,7 +107,7 @@ def peakmatch(args):
             pms = sorted(zip(*(pms+[list(zip(*peaks.peaks)[2])])),key=lambda x : x[1],reverse=True)
             print '\n'.join(map(lambda x : samplenum+"%7.3f %6.2f %s" % x[1:], filter(lambda xx : xx[1]>=dcut,pms)))
         
-def peakmxy(args):
+def peakmxy(args, xargs):
     with open(args.peakfile) as fin:
         peaks=map(lambda t : t.split(), fin)
     Np = len(peaks)
