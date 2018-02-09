@@ -151,11 +151,15 @@ class DualWindow(NMRWindow):
         self.zfloor = 1
         self.contur = []
         self.auxpeaks_loaded = False
+        self.labmark = None
     def set_hsqc(self, data1, data2):
         self.datasets = [ data1, data2 ]
         self.set_contour_levels()
     def set_contour_levels(self):
-        self.V = map(lambda x : self.log_contour_levels(x.nv_data[self.box[3]:self.box[2],self.box[0]:self.box[1]]),  self.datasets)
+        if self.box:
+            self.V = map(lambda x : self.log_contour_levels(x.nv_data[self.box[3]:self.box[2],self.box[0]:self.box[1]]),  self.datasets)
+        else:
+            self.V = map(lambda x : self.log_contour_levels(x.nv_data),  self.datasets)
     def plot(self):
         self.add_subplot(111)
         self.axes[0].clear()
@@ -248,8 +252,9 @@ class DualWindow(NMRWindow):
             self.axes[0].set_xlim((max(self.ax)+xpad, min(self.ax)-xpad))
             self.axes[0].set_ylim(max(self.ay)+ypad, min(self.ay)-ypad)
     def aux_font_size(self, fs):
-        for label in self.alabels:
-            label.set_fontsize(fs)
+        if self.auxpeaks_loaded:
+            for label in self.alabels:
+                label.set_fontsize(fs)
         if self.labmark:
             self.labmark.set_fontsize(fs)
 
