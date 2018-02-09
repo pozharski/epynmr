@@ -3,6 +3,7 @@ from scipy import array, concatenate, sqrt, arange
 from scipy.stats import scoreatpercentile
 from scipy.interpolate import RectBivariateSpline
 from scipy.special import erfcinv, erfc, erfinv
+import sys
 
 def readarray(fin, astype='I', num=1):
     '''
@@ -169,8 +170,6 @@ class hsqc(nvdata):
             sys.stdout.write("Got height matrix\n")
         peaks = []
         ymax, xmax = h.shape
-        ymax -= 1
-        xmax -= 1
         while len(peaks)< num:
             if h.max() > 0:
                 x,y = h.max(0).argmax(), h.max(1).argmax()

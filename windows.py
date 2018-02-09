@@ -1,7 +1,7 @@
 from nmrio import hsqc, peakset
 from matplotlib.figure import Figure
 from matplotlib.pyplot import figure, gca, show, grid, close, annotate
-from scipy import logspace, log10, delete, array
+from scipy import logspace, log10, delete, array, sqrt, nonzero, unique
 import sys
 
 import Tkinter, tkFileDialog
@@ -417,6 +417,21 @@ class PeakWindow(Figure):
         pxy = self.peaks[:,:2]
         sf=sqrt(axy.var(0)+pxy.var(0))
         nindex = [nonzero((abs((pxy-axy[i,:]))/sf<0.1).all(1))[0] for i in range(axy.shape[0])]
+        curlen = sum([len(x) for x in nindex])
+        while True:
+            v,c = unique([x[0] for x in nindex if len(x)==1],return_counts=True)
+            singles = v[c==1]
+            nindex = [array([t for t in x if t not in singles]) if len(x)!=1 else x for x in nindex]
+            newlen = sum([len(x) for x in nindex])
+            if newlen == curlen:
+                break
+            else:
+                curlen = newlen
+        sindex = [t1[argmin([sum((axy[i]-pxy[t2])**2) for t2 in t1])] if len(t1)>1 else None for i,t1 in enumerate(nindex)]
+        v,c = unique(sindex,return_counts=True)
+        singles = v[c==1]
+        sindex = [t if t in singles else None for t in sindex]
+        nindex = [array([s]) if len(n)>1 and s is not None else n for n,s in zip(*(nindex,sindex))]
         # Continue here!!!
     def onzoom(self, event):
         if event.key in 'npAM':
