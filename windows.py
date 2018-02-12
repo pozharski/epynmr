@@ -1,7 +1,7 @@
 from nmrio import hsqc, peakset
 from matplotlib.figure import Figure
 from matplotlib.pyplot import figure, gca, show, grid, close, annotate
-from scipy import logspace, log10, delete, array, sqrt, nonzero, unique
+from scipy import logspace, log10, delete, array, sqrt, nonzero, unique, argmin
 import sys
 
 import Tkinter, tkFileDialog
@@ -84,6 +84,7 @@ class TKPeaks(TKWindow):
         Tkinter.Button(self.tkroot, text='Save peaks', command=self.savepeaks).grid(row=5, column=0)
         Tkinter.Button(self.tkroot, text='Load peaks', command=self.loadpeaks).grid(row=5, column=1)
         Tkinter.Button(self.tkroot, text='Load auxillary peaks', command=self.auxpeaks).grid(row=5, column=2)
+        Tkinter.Button(self.tkroot, text='Match peaks', command=self.automatch).grid(row=6, column=0)
         Tkinter.Button(self.tkroot, text='Quit', command=self.tkroot.quit).grid()
     def add_button(self, key, label, row, column):
         self.buttons[key] = Tkinter.Button(self.tkroot, text=label, command=lambda : self.gwindow.canvas.key_press_event(key))
@@ -105,6 +106,12 @@ class TKPeaks(TKWindow):
     def auxpeaks(self):
         self.gwindow.shiftsdat = tkFileDialog.askopenfilename(title = "Load auxillary peaks",filetypes = (("Peak files","*.dat"),("all files","*.*")))
         self.gwindow.canvas.key_press_event('A')
+    def automatch(self):
+        self.gwindow.canvas.key_press_event('M')
+        peakfile = tkFileDialog.asksaveasfilename(title = "Save as...",filetypes = (("Peak files","*.peaks"),("all files","*.*")))
+        with open(peakfile, "w") as fout:
+            for peak in self.gwindow.mpeaks:
+                fout.write("%10f %10f %20s\n" % tuple(peak))
 
 class NMRWindow(Figure):
     def __init__(self, *args, **kwds):
@@ -396,6 +403,8 @@ class PeakWindow(Figure):
             if self.auxpeaks_loaded:
                 self.automatch()
                 self.onzoom(event)
+            else:
+                print "Auxillary peaks not yet loaded."
         if event.key == 'q':
             close(self)
             sys.exit()
@@ -417,22 +426,15 @@ class PeakWindow(Figure):
         pxy = self.peaks[:,:2]
         sf=sqrt(axy.var(0)+pxy.var(0))
         nindex = [nonzero((abs((pxy-axy[i,:]))/sf<0.1).all(1))[0] for i in range(axy.shape[0])]
-        curlen = sum([len(x) for x in nindex])
-        while True:
-            v,c = unique([x[0] for x in nindex if len(x)==1],return_counts=True)
-            singles = v[c==1]
-            nindex = [array([t for t in x if t not in singles]) if len(x)!=1 else x for x in nindex]
-            newlen = sum([len(x) for x in nindex])
-            if newlen == curlen:
-                break
-            else:
-                curlen = newlen
-        sindex = [t1[argmin([sum((axy[i]-pxy[t2])**2) for t2 in t1])] if len(t1)>1 else None for i,t1 in enumerate(nindex)]
-        v,c = unique(sindex,return_counts=True)
-        singles = v[c==1]
-        sindex = [t if t in singles else None for t in sindex]
-        nindex = [array([s]) if len(n)>1 and s is not None else n for n,s in zip(*(nindex,sindex))]
-        # Continue here!!!
+        d2 = [sorted(((axy-x)**2).sum(1))[1] for x in axy]
+        dindex = [x[(((pxy[x]-axy[i])**2).sum(1)<0.25*d2[i])] for i,x in enumerate(nindex)]
+        qindex = [(i,x,((pxy[x]-axy[i])**2).sum(1)) for i,x in enumerate(dindex) if len(x)>1]
+        d2cutoff = 10
+        for i,x in [(i,[x[argmin(ds)]]) for i,x,ds in qindex if sorted(ds/min(ds))[1]>d2cutoff]:
+            dindex[i] = x
+        self.mpeaks = [pxy[x[0]].tolist()+[self.alabels[i].get_text()] for i,x in enumerate(dindex) if len(x)==1]
+        print "Matched %d peaks out of %d/%d" % (len(self.mpeaks),len(axy),len(pxy))
+        # Continue here???
     def onzoom(self, event):
         if event.key in 'npAM':
             x,y = self.dataset.dim_convinv(0,self.ax[self.auxcounter]), self.dataset.dim_convinv(1,self.ay[self.auxcounter])
