@@ -37,6 +37,8 @@ def peakwindow(data, num=50, box=None, apfname=None, *args, **kwds):
     if apfname is not None:
         fig.loadapeaks(apfname)
     fig.canvas.mpl_connect('key_press_event', fig.onkeypress)
+    if 'shift_globally' in kwds:
+        fig.shift_globally = kwds['shift_globally']
     return fig
 
 def titrwindow(aponum, holonums, peaknum, box=None, *args, **kwds):
@@ -66,7 +68,11 @@ class TKPeaks(TKWindow):
     def build(self, margs):
         if margs.input_file is None:
             margs.input_file = tkFileDialog.askopenfilename(title = "Select NV file",filetypes = (("NMRview files","*.nv"),("all files","*.*")))
-        self.gwindow = peakwindow(margs.input_file, margs.num_peaks, [margs.bleft, margs.bright, margs.bbottom, margs.btop], margs.auxpeakfile)
+        self.gwindow = peakwindow(margs.input_file, 
+                                  margs.num_peaks, 
+                                  [margs.bleft, margs.bright, margs.bbottom, margs.btop], 
+                                  margs.auxpeakfile,
+                                  shift_globally=margs.shift_globally)
         self.label = Tkinter.Label(self.tkroot, text="HSQC peaks tool")
         self.label.grid()
         buttons =   [   ('pageup',    'Contour up', 1, 0),
@@ -275,6 +281,7 @@ class PeakWindow(Figure):
         self.ay = []
         self.shiftsdat = 'shifts.dat'
         self.auxpeaks_loaded = False
+        self.shift_globally = False
     def set_max_peaknum(self, peaknum):
         self.peaknum = peaknum
     def set_box(self, box=None):
@@ -364,20 +371,35 @@ class PeakWindow(Figure):
             self.onzoom(event)
         if event.key == 'x':
             delta = array([self.dax,0])
-            self.ax += self.dax
+            if self.shift_globally:
+                self.ax += self.dax
+            else:
+                self.ax[self.auxcounter] += self.dax
         if event.key == 'X':
             delta = array([-self.dax,0])
-            self.ax -= self.dax
+            if self.shift_globally:
+                self.ax -= self.dax
+            else:
+                self.ax[self.auxcounter] -= self.dax
         if event.key == 'y':
             delta = array([0,self.day])
-            self.ay += self.day
+            if self.shift_globally:
+                self.ay += self.day
+            else:
+                self.ax[self.auxcounter] += self.day
         if event.key == 'Y':
             delta = array([0,-self.day])
-            self.ay -= self.day
+            if self.shift_globally:
+                self.ay -= self.day
+            else:
+                self.ax[self.auxcounter] -= self.day
         if event.key in 'xXyY':
             self.auxmarks.set_data((self.ax, self.ay))
-            for alabel in self.alabels:
-                alabel.set_position(delta+array(alabel.get_position()))
+            if self.shift_globally:
+                for alabel in self.alabels:
+                    alabel.set_position(delta+array(alabel.get_position()))
+            else:
+                self.alabels[self.auxcounter].set_position(delta+array(self.alabels[self.auxcounter].get_position()))
             self.onzoom(event)
         if event.key == 'delete':
             self.peaks = delete(self.peaks, self.pcounter, 0)
@@ -436,7 +458,7 @@ class PeakWindow(Figure):
         print "Matched %d peaks out of %d/%d" % (len(self.mpeaks),len(axy),len(pxy))
         # Continue here???
     def onzoom(self, event):
-        if event.key in 'npAM':
+        if event.key in 'npAMxXyY':
             x,y = self.dataset.dim_convinv(0,self.ax[self.auxcounter]), self.dataset.dim_convinv(1,self.ay[self.auxcounter])
         else:
             x,y,h = self.npks[self.pcounter]

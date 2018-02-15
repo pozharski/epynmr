@@ -12,7 +12,9 @@ peakhsqc    Find and edit peaks in HSQC spectrum
 titrhsqc    Manually process set of NMR titrations
 autocros    Auto-process a set of spectra looking for shifts
 peakcros    Match a set of peaks looking for shifts
-peakmatch   
+peakmatch   Fancier version of peakcros
+peakmxy		Even fancier version of peakcros
+dualpdfs	Create a PDF file with pairwise spectra overlaps
 
 '''
 
@@ -52,6 +54,7 @@ parser.add_argument('--zcutoff', default=2.0, type=float, help="Peak matching cu
 parser.add_argument('--print-peakmatch', action='store_true')
 parser.add_argument('--print-full', action='store_true')
 parser.add_argument('--pdfile', default="epynmr.pdf", help='Output PDF file name')
+parser.add_argument('--shift-globally', action='store_true')
 
 
 args, xargs = parser.parse_known_args()
