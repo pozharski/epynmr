@@ -3,6 +3,8 @@ from matplotlib.figure import Figure
 from matplotlib.pyplot import figure, gca, show, grid, close, annotate
 from scipy import logspace, log10, delete, array, sqrt, nonzero, unique, argmin
 import sys
+from matplotlib.widgets import Button
+from mplgui import MPLGUI
 
 import Tkinter, tkFileDialog
 
@@ -29,6 +31,7 @@ def dualwindow(data1, data2, peakfile, box=None, *args, **kwds):
 
 def peakwindow(data, num=50, box=None, apfname=None, *args, **kwds):
     fig = figure(FigureClass=PeakWindow)
+    fig.build_mplgui()
     fig.set_box(box)
     fig.set_hsqc(data if data.__class__ is hsqc else hsqc(data))
     fig.set_max_peaknum(num)
@@ -282,6 +285,21 @@ class PeakWindow(Figure):
         self.shiftsdat = 'shifts.dat'
         self.auxpeaks_loaded = False
         self.shift_globally = False
+    def destroy(self, event):
+        close(self)
+        sys.exit()
+    def build_mplgui(self):
+        self.add_subplot(111)
+        self.mplgui = MPLGUI(self)
+        self.mplgui.add_button('Quit', self.destroy)
+        self.mplgui.add_key_button('Contour+','pageup')
+        self.mplgui.add_key_button('Contour-','pagedown')
+        self.mplgui.add_key_button('Home','home')
+        self.mplgui.add_key_button('Next','+')
+        self.mplgui.add_key_button('Previous','-')
+        self.mplgui.add_key_button('zoom in', 'z')
+        self.mplgui.add_key_button('zoom out', 'Z')
+        self.mplgui.add_key_button('delete','delete')
     def set_max_peaknum(self, peaknum):
         self.peaknum = peaknum
     def set_box(self, box=None):
